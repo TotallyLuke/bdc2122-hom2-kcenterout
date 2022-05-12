@@ -23,7 +23,7 @@ Make sure to use the classes from the `org.apache.spark.mllib package`. There ar
 
 You must:
 
-1. Develop a method `SeqWeightedOutliers(P,W,k,z,alpha)` which *implements the weighted variant of kcenterOUT* (the 3-approximation algorithm for k-center with z-outliers). The method returns the set of centers `S` computed as specified by the algorithm (as `ArrayList<Vector>`). It is understood that the i-th integer in `W` is the weight of the i-th point in `P`, and takes as input
+1. Develop a method `SeqWeightedOutliers(P,W,k,z,alpha)` which *implements the weighted variant of kcenterOUT* (the 3-approximation algorithm for k-center with z-outliers). The method returns the set of centers `S` computed as specified by the algorithm (as `ArrayList<Vector>`). It is understood that the i-th integer in `W` is the weight of the i-th point in `P`. The method takes as input
     * the set of points `P`,as `ArrayList<Vector>`
     * the set of weights `W`, as `ArrayList<Long>`
     * the number of centers `k`,
