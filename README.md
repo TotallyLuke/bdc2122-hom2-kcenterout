@@ -51,6 +51,15 @@ The program must do the following:
 Test your program using the datasets available [here](https://esami.elearning.unipd.it/mod/page/view.php?id=44241).
 **ADD DATASETS and SUGGESTED VALUES OF k and z**
 
+## HINTS (from slides)
+
+* Representation of points (arbitrary dimensionality):
+   * Java: class org.apache.spark.mllib.linalg.Vector, which can be manipulated through static methods offered by class org.apache.spark.mllib.linalg.Vectors.
+* You will not use Spark (except for the points representation in Java)
+* Distance computations are the bottleneck (especially in Python!). *You may precompute all distances*: up to 104 they are likely to fit it RAM, and for the MapReduce implementation (Homework 3) we won’t need to run it on larger instances.
+* Carefully select the representation for `Z`.
+* Debug your code for correctness and efficiency (try to identify sources of inefficiency!)
+
 ## SUBMISSION INSTRUCTIONS
 
 Each group must submit a single file (G050HW2.java). Only one student per group must submit the files in Moodle Exam using the link provided in the Homework2 section. Make sure that your code is free from compiling/run-time errors and that you use the file/variable names in the homework description, otherwise your score will be penalized.
