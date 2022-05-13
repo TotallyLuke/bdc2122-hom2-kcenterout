@@ -10,9 +10,8 @@ import java.util.*;
 public class G050HW2 {
 
 
-    private static double r_min = 0.0;
-    private static double last_r = 0.0;
-    private static int n_iters = 0;
+
+    private static double[][] distanceMatrix;
 
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 // Input reading methods
@@ -43,12 +42,13 @@ public class G050HW2 {
 
     /**
      * Implements the weighted variant of kcenterOUT
-     * @param P set of points
-     * @param W set of weights
-     * @param k number of centers
-     * @param z number of allowed outliers
+     *
+     * @param P     set of points
+     * @param W     set of weights
+     * @param k     number of centers
+     * @param z     number of allowed outliers
      * @param alpha coefficient used in ball generation
-     * @return  set of centers
+     * @return set of centers
      */
     public static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P,
                                                         ArrayList<Long> W,
@@ -56,20 +56,114 @@ public class G050HW2 {
                                                         int z,
                                                         double alpha) {
         // compute (min distance between first k + z + 1 points of P)/2
+        double r_min = Double.MAX_VALUE;
+        for (int i = 0; i < k + z + 1; ++i) {
+            for (int j = i + 1; j < k + z + 1; ++j) {
+                if (distanceMatrix[i][j] < r_min * 2) {
+                    r_min = distanceMatrix[i][j] / 2;
+                }
+            }
+        }
 
+        double r = r_min;
+        ArrayList<Vector> S = new ArrayList<>(0);
+        int n_iters = 1;
         // kCenterOut
+        while (true) {
+            List<Integer> Z_indexes = new LinkedList<>();
+            for (int i = 0; i < P.size(); ++i) {
+                Z_indexes.add(i);
+            }
+            S.clear();
 
+            long Wz = 0;
+            for (double w : W) {
+                Wz += w;
+            }
+
+            while (S.size() < k && Wz > 0) {
+                // PREcondition: Z must be greater than 0
+                int first = Z_indexes.get(0);
+                Vector newcenter = P.get(first);        // dummy inizialization to avoid error
+                double max = getBallWeight(r, alpha, Z_indexes, first, W);   // max ball weight
+                int i_max = first;
+                for (int i = 0; i < P.size(); ++i) {    // find max ball, assign center and value of it to newcenter and max
+                    double ball_weight = getBallWeight(r,  alpha, Z_indexes, i, W);
+                    if (ball_weight > max) {
+                        max = ball_weight;
+                        newcenter = P.get(i);
+                        i_max = i;
+                    }
+                }
+                S.add(newcenter);
+
+                for (int i = 0; i < Z_indexes.size(); ) {
+                    if (distanceMatrix[i_max][Z_indexes.get(i)] <= (3 + 4 * alpha) * r) {
+                        Wz -= W.get(Z_indexes.get(i));
+                        Z_indexes.remove(i);
+                    } else {
+                        ++i;
+                    }
+                }
+
+            }
+            if (Wz <= z)
+                break;
+            // else
+            r = 2 * r;
+            ++n_iters;
+        }
+        System.out.println("Initial guess = " + r_min);
+        System.out.println("Final guess = " + r);
+        System.out.println("Number of guesses = " + n_iters);
+        return S;
     }
 
     /**
+     * Computes the weight of ball centered in c_i of radius (1 + 2*alpha) * r
+     *
+     * @param r radius of ball
+     * @param alpha alpha
+     * @param Z_indexes indexes in Uncovered set
+     * @param i index of ongoing Point c_i
+     * @return ball weights
+     */
+    private static double getBallWeight(double r, double alpha, List<Integer> Z_indexes, int i, ArrayList<Long> W) {
+        double ball_weight = 0.0;
+        for (int j : Z_indexes) {
+            if (distanceMatrix[i][j] <= (1 + 2*alpha) * r) {
+                ball_weight += W.get(j);
+            }
+        }
+        return ball_weight;
+    }
+
+
+    /**
      * Computes the value of the objective function
+     *
      * @param P set of points
      * @param S set of centers
      * @param z outliers
      * @return value of the objective function
      */
     public static double ComputeObjective(ArrayList<Vector> P, ArrayList<Vector> S, int z) {
+        ArrayList<Double> distsToCenters = new ArrayList<>(P.size());
 
+        for (Vector p : P) {
+            double nearNeighP = Double.MAX_VALUE;
+            for (Vector s : S) {
+                final double cand = Math.sqrt(Vectors.sqdist(p, s));
+                if (cand < nearNeighP) {
+                    nearNeighP = cand;
+                }
+            }
+            distsToCenters.add(nearNeighP);
+        }
+
+
+        distsToCenters.sort(Comparator.naturalOrder());
+        return distsToCenters.get(P.size() - 1 - z);
     }
 
     public static void main(String[] args) throws IOException {
@@ -83,23 +177,32 @@ public class G050HW2 {
         final int z = Integer.parseInt(args[2]);
 
         ArrayList<Vector> inputPoints = readVectorsSeq(path);
-        ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(inputPoints.size(), 0L));
+        ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(inputPoints.size(), 1L));
 
-        if (weights.size() != inputPoints.size() || weights.size() ==0)  throw new AssertionError("ERROR: len(W) != len(P)");
+        if (weights.size() != inputPoints.size() || weights.size() == 0)
+            throw new AssertionError("ERROR: len(W) != len(P)");
 
-        final long startTime = System.currentTimeMillis();
-        ArrayList <Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
-        final long timeElapsed = System.currentTimeMillis() - startTime;
-
-        double objective = ComputeObjective(inputPoints, solution, z);
+        // Distance Matrix calculation
+        // maybe is better an arraylist of arraylists
+        distanceMatrix = new double[inputPoints.size()][inputPoints.size()];
+        for (int i = 0; i < inputPoints.size(); ++i) {
+            for (int j = i + 1; j < inputPoints.size(); ++j) {
+                distanceMatrix[i][j] = distanceMatrix[j][i] = Math.sqrt(Vectors.sqdist(inputPoints.get(i), inputPoints.get(j)));
+            }
+        }
 
 
         System.out.println("Input size n = " + inputPoints.size());
         System.out.println("Number of centers k = " + k);
         System.out.println("Number of outliers z = " + z);
-        System.out.println("Initial guess = " + r_min);
-        System.out.println("Final guess = " + last_r);
-        System.out.println("Number of guesses = " + n_iters);
+
+        final long startTime = System.currentTimeMillis();
+        ArrayList<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
+        final long timeElapsed = System.currentTimeMillis() - startTime;
+
+        double objective = ComputeObjective(inputPoints, solution, z);
+
+
         System.out.println("Objective function = " + objective);
         System.out.println("Time of SeqWeightedOutliers = " + timeElapsed);
     }
