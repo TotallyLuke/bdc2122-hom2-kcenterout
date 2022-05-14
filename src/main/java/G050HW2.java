@@ -22,7 +22,6 @@ public class G050HW2 {
         for (int i = 0; i < tokens.length; ++i) {
             data[i] = Double.parseDouble(tokens[i]);
         }
-
         return Vectors.dense(data);
     }
 
@@ -83,6 +82,7 @@ public class G050HW2 {
 
             while (S.size() < k && Wz > 0) {
                 // PREcondition: Z must be greater than 0
+                //TODO: why here max is not initialized as 0 (as in the pseudocode)? In this way you are also checking twice the first point: here and in the for loop
                 int first = Z_indexes.get(0);
                 Vector newcenter = P.get(first);        // dummy inizialization to avoid error
                 double max = getBallWeight(r, alpha, Z_indexes, first, W);   // max ball weight
@@ -105,7 +105,6 @@ public class G050HW2 {
                         ++i;
                     }
                 }
-
             }
             if (Wz <= z)
                 break;
@@ -126,7 +125,7 @@ public class G050HW2 {
      * @param alpha alpha
      * @param Z_indexes indexes in Uncovered set
      * @param i index of ongoing Point c_i
-     * @return ball weights
+     * @return ball weight
      */
     private static double getBallWeight(double r, double alpha, List<Integer> Z_indexes, int i, ArrayList<Long> W) {
         double ball_weight = 0.0;
@@ -179,8 +178,16 @@ public class G050HW2 {
         ArrayList<Vector> inputPoints = readVectorsSeq(path);
         ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(inputPoints.size(), 1L));
 
+        //TODO: how can this happen since weights is initialized to have the same length of inputPoints?
         if (weights.size() != inputPoints.size() || weights.size() == 0)
             throw new AssertionError("ERROR: len(W) != len(P)");
+
+
+        System.out.println("Input size n = " + inputPoints.size());
+        System.out.println("Number of centers k = " + k);
+        System.out.println("Number of outliers z = " + z);
+
+        final long startTime = System.currentTimeMillis();
 
         // Distance Matrix calculation
         // maybe is better an arraylist of arraylists
@@ -191,12 +198,6 @@ public class G050HW2 {
             }
         }
 
-
-        System.out.println("Input size n = " + inputPoints.size());
-        System.out.println("Number of centers k = " + k);
-        System.out.println("Number of outliers z = " + z);
-
-        final long startTime = System.currentTimeMillis();
         ArrayList<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
         final long timeElapsed = System.currentTimeMillis() - startTime;
 
