@@ -4,7 +4,10 @@ import org.apache.spark.mllib.linalg.Vectors;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 
 public class G050HW2 {
@@ -43,7 +46,7 @@ public class G050HW2 {
         int n_iters = 1;
         // kCenterOut
         while (true) {
-            List<Integer> Z_indexes = new LinkedList<>(); // Z_indexes: set of indexes of points in Uncovered set
+            ArrayList<Integer> Z_indexes = new ArrayList<>(); // Z_indexes: set of indexes of points in Uncovered set
             for (int i = 0; i < P.size(); ++i) { // at the beginning, all points are in Uncovered set
                 Z_indexes.add(i);
             }
@@ -56,8 +59,7 @@ public class G050HW2 {
 
             while (S.size() < k && Wz > 0) {
                 // PREcondition: Z must be greater than 0 (true because Wz > 0)
-                //TODO: why here max is not initialized as 0 (as in the pseudocode)? In this way you are also checking twice the first point: here and in the for loop
-                //@ftrole newcenter if not initialized then error in line 71, either create an empty Vector or newcenter = P.get(first)
+                // newcenter must be initialized to avoid error later, either create an empty Vector or newcenter = P.get(first)
                 int first = Z_indexes.get(0);
                 Vector newcenter = P.get(first);        // dummy inizialization to avoid error
                 double max = getBallWeight(first, r, alpha, Z_indexes, W);   // max ball weight
@@ -73,7 +75,16 @@ public class G050HW2 {
                 }
                 S.add(newcenter);
 
-                for (int i = 0; i < Z_indexes.size(); ) { // remove now covered points from Uncovered set, update Wz
+//                ListIterator<Integer> Z_iter = Z_indexes.listIterator();
+//                while (Z_iter.hasNext()) {
+//                    final int Z_index = Z_iter.next().intValue();
+//                    if (distanceMatrix[i_max][Z_index] <= (3 + 4 * alpha) * r) {
+//                        Wz -= W.get(Z_index);
+//                        Z_iter.remove();
+//                    }
+//
+//                }
+                for (int i = 0; i < Z_indexes.size();) { // remove now covered points from Uncovered set, update Wz
                     if (distanceMatrix[i_max][Z_indexes.get(i)] <= (3 + 4 * alpha) * r) {
                         Wz -= W.get(Z_indexes.get(i));
                         Z_indexes.remove(i);
@@ -104,7 +115,7 @@ public class G050HW2 {
      * @param W         weights
      * @return ball weight
      */
-    private static double getBallWeight(int i, double r, double alpha, List<Integer> Z_indexes, ArrayList<Long> W) {
+    private static double getBallWeight(int i, double r, double alpha, ArrayList<Integer> Z_indexes, ArrayList<Long> W) {
         double ball_weight = 0.0;
         for (int j : Z_indexes) {
             if (distanceMatrix[i][j] <= (1 + 2*alpha) * r) {
