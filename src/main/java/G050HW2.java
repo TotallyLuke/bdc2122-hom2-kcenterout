@@ -27,6 +27,7 @@ public class G050HW2 {
                                                         int z,
                                                         double alpha) {
         // compute (min distance between first k + z + 1 points of P)/2
+        // this is an initial guess for the radius of the ball
         double r_min = Double.MAX_VALUE;
         for (int i = 0; i < k + z + 1; ++i) {
             for (int j = i + 1; j < k + z + 1; ++j) {
@@ -36,18 +37,19 @@ public class G050HW2 {
             }
         }
 
+
         double r = r_min;
-        ArrayList<Vector> S = new ArrayList<>(0);
+        ArrayList<Vector> S = new ArrayList<>(0); // S: set of centers
         int n_iters = 1;
         // kCenterOut
         while (true) {
-            List<Integer> Z_indexes = new LinkedList<>();
-            for (int i = 0; i < P.size(); ++i) {
+            List<Integer> Z_indexes = new LinkedList<>(); // Z_indexes: set of indexes of points in Uncovered set
+            for (int i = 0; i < P.size(); ++i) { // at the beginning, all points are in Uncovered set
                 Z_indexes.add(i);
             }
             S.clear();
 
-            long Wz = 0;
+            long Wz = 0; // Wz: sum of weights of points in Uncovered set
             for (double w : W) {
                 Wz += w;
             }
@@ -61,6 +63,7 @@ public class G050HW2 {
                 double max = getBallWeight(first, r, alpha, Z_indexes, W);   // max ball weight
                 int i_max = first;
                 for (int i = 1; i < P.size(); ++i) {    // find max ball, assign center and value of it to newcenter and max
+                                                        // finds the best center for uncovered points
                     double ball_weight = getBallWeight(i, r,  alpha, Z_indexes, W);
                     if (ball_weight > max) {
                         max = ball_weight;
@@ -70,7 +73,7 @@ public class G050HW2 {
                 }
                 S.add(newcenter);
 
-                for (int i = 0; i < Z_indexes.size(); ) {
+                for (int i = 0; i < Z_indexes.size(); ) { // remove now covered points from Uncovered set, update Wz
                     if (distanceMatrix[i_max][Z_indexes.get(i)] <= (3 + 4 * alpha) * r) {
                         Wz -= W.get(Z_indexes.get(i));
                         Z_indexes.remove(i);
@@ -79,10 +82,10 @@ public class G050HW2 {
                     }
                 }
             }
-            if (Wz <= z)
+            if (Wz <= z) // I've covered all non outliers points
                 break;
             // else
-            r = 2 * r;
+            r = 2 * r; // double radius for a new attempt
             ++n_iters;
         }
         System.out.println("Initial guess = " + r_min);
@@ -120,14 +123,15 @@ public class G050HW2 {
      * @return value of the objective function
      */
     public static double ComputeObjective(ArrayList<Vector> P, ArrayList<Vector> S, int z) {
-        //no problem if points are overlapping
+        // no problem if points are overlapping
         ArrayList<Double> distsToCenters = new ArrayList<>(Collections.nCopies(P.size(), Double.MAX_VALUE));
 
-        for(Vector s : S) {
+        for(Vector s : S) { // for every center
             final int indS = P.indexOf(s); // compute indexes (in P) of elements in S
 
             // to keep update distsToCenters with distances to subset of visited centers
-            for (int p = 0; p < P.size(); ++p) {
+            for (int p = 0; p < P.size(); ++p) { // for every point, calculate distance to center
+                                                 // since S is a subset of P, we can use precalculated distanceMatrix
                 if (distanceMatrix[indS][p] < distsToCenters.get(p)) {
                     distsToCenters.set(p, distanceMatrix[indS][p]);
                 }
