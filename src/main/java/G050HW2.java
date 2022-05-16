@@ -119,6 +119,7 @@ public class G050HW2 {
         double ball_weight = 0.0;
         for (int j : Z_indexes) {
             if (distanceMatrix[i][j] <= (1 + 2*alpha) * r) {
+                //TODO: index of W may be different from indexes of Z_indexes
                 ball_weight += W.get(j);
             }
         }
