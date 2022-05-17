@@ -10,8 +10,6 @@ import java.util.*;
 
 public class G050HW2 {
 
-    private static double[][] distanceMatrix;
-
     /**
      * Implements the weighted variant of kcenterOUT
      *
@@ -27,6 +25,14 @@ public class G050HW2 {
                                                         int k,
                                                         int z,
                                                         double alpha) {
+        // Distance Matrix calculation
+        double[][] distanceMatrix = new double[P.size()][P.size()];
+        for (int i = 0; i < P.size(); ++i) {
+            for (int j = i + 1; j < P.size(); ++j) {
+                distanceMatrix[i][j] = distanceMatrix[j][i] = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
+            }
+        }
+
         // compute (min distance between first k + z + 1 points of P)/2
         // this is an initial guess for the radius of the ball
         double r_min = Double.MAX_VALUE;
@@ -64,12 +70,12 @@ public class G050HW2 {
                 final int first = Z_indexes.get(0);
 
                 Vector newcenter = P.get(first);        // dummy inizialization to avoid error
-                double max = getBallWeight(first, r, alpha, Z_indexes, W);   // max ball weight
+                double max = getBallWeight(first, r, alpha, Z_indexes, W, distanceMatrix);   // max ball weight
                 int i_max = first;
 
                 for (int i = 1; i < P.size(); ++i) {    // finds the best center for uncovered points
 
-                    double ball_weight = getBallWeight(i, r,  alpha, Z_indexes, W);
+                    double ball_weight = getBallWeight(i, r, alpha, Z_indexes, W, distanceMatrix);
                     if (ball_weight > max) {
                         max = ball_weight;
                         newcenter = P.get(i);
@@ -78,19 +84,10 @@ public class G050HW2 {
                 }
                 S.add(newcenter);
 
-//  Alternative:
-//                ListIterator<Integer> Z_iter = Z_indexes.listIterator();
-//                while (Z_iter.hasNext()) {
-//                    final int Z_index = Z_iter.next();
-//                    if (distanceMatrix[i_max][Z_index] <= (3 + 4 * alpha) * r) {
-//                        Wz -= W.get(Z_index);
-//                        Z_iter.remove();
-//                    }
-//                }
-                for (int i = 0; i < Z_indexes.size();) { // remove now covered points from Uncovered set, update Wz
+                for (int i = 0; i < Z_indexes.size(); ) { // remove now covered points from Uncovered set, update Wz
                     if (distanceMatrix[i_max][Z_indexes.get(i)] <= (3 + 4 * alpha) * r) {
                         Wz -= W.get(Z_indexes.get(i));
-                        Z_indexes.remove(i);
+                        Z_indexes.remove(i); // removal make Z_indexes shrinks, no need to increment i
                     } else {
                         ++i;
                     }
@@ -118,10 +115,10 @@ public class G050HW2 {
      * @param W         weights
      * @return ball weight
      */
-    private static double getBallWeight(int i, double r, double alpha, List<Integer> Z_indexes, ArrayList<Long> W) {
+    private static double getBallWeight(int i, double r, double alpha, List<Integer> Z_indexes, ArrayList<Long> W, double[][] distMatr) {
         double ballWeight = 0.0;
         for (int j : Z_indexes) {
-            if (distanceMatrix[i][j] <= (1 + 2*alpha) * r) {
+            if (distMatr[i][j] <= (1 + 2 * alpha) * r) {
                 ballWeight += W.get(j);
             }
         }
@@ -137,22 +134,20 @@ public class G050HW2 {
      * @return value of the objective function
      */
     public static double ComputeObjective(ArrayList<Vector> P, ArrayList<Vector> S, int z) {
-        // no problem if points in P (or S) are overlapping
-        ArrayList<Double> distsToCenters = new ArrayList<>(Collections.nCopies(P.size(), Double.MAX_VALUE));
+        ArrayList<Double> distsToCenters = new ArrayList<>();
 
-        for(Vector s : S) { // for every center
-            final int indS = P.indexOf(s); // find indexes (in P) of elements in S (or index of an overlapping point)
-
-            for (int p = 0; p < P.size(); ++p) { // for every point, calculate distance to center s
-                // since S is a subset of P, we can use precalculated distanceMatrix
-                if (distanceMatrix[indS][p] < distsToCenters.get(p)) {
-                    distsToCenters.set(p, distanceMatrix[indS][p]);
+        for (Vector p : P) {
+            double nearNeighP = Double.MAX_VALUE; // distance to nearest center
+            for (Vector s : S) {
+                final double cand = Math.sqrt(Vectors.sqdist(p, s));
+                if (cand < nearNeighP) {
+                    nearNeighP = cand;
                 }
             }
+            distsToCenters.add(nearNeighP);
         }
 
         distsToCenters.sort(Comparator.naturalOrder());
-
         return distsToCenters.get(P.size() - 1 - z);
     }
 
@@ -173,15 +168,8 @@ public class G050HW2 {
         System.out.println("Number of centers k = " + k);
         System.out.println("Number of outliers z = " + z);
 
-        final long startTime = System.currentTimeMillis();
 
-        // Distance Matrix calculation
-        distanceMatrix = new double[inputPoints.size()][inputPoints.size()];
-        for (int i = 0; i < inputPoints.size(); ++i) {
-            for (int j = i + 1; j < inputPoints.size(); ++j) {
-                distanceMatrix[i][j] = distanceMatrix[j][i] = Math.sqrt(Vectors.sqdist(inputPoints.get(i), inputPoints.get(j)));
-            }
-        }
+        final long startTime = System.currentTimeMillis();
         ArrayList<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
         final long timeElapsed = System.currentTimeMillis() - startTime;
 
