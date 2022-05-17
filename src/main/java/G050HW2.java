@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 
 
 public class G050HW2 {
@@ -42,11 +40,12 @@ public class G050HW2 {
 
 
         double r = r_min;
-        ArrayList<Vector> S = new ArrayList<>(0); // S: set of centers
+        ArrayList<Vector> S = new ArrayList<>(); // S: set of centers
         int n_iters = 1;
-        // kCenterOut
+
+
         while (true) {
-            ArrayList<Integer> Z_indexes = new ArrayList<>(); // Z_indexes: set of indexes of points in Uncovered set
+            List<Integer> Z_indexes = new ArrayList<>(); // Z_indexes: set of indexes of points in Uncovered set
             for (int i = 0; i < P.size(); ++i) { // at the beginning, all points are in Uncovered set
                 Z_indexes.add(i);
             }
@@ -58,14 +57,18 @@ public class G050HW2 {
             }
 
             while (S.size() < k && Wz > 0) {
-                // PREcondition: Z must be greater than 0 (true because Wz > 0)
-                // newcenter must be initialized to avoid error later, either create an empty Vector or newcenter = P.get(first)
-                int first = Z_indexes.get(0);
+                // PREcondition: |Z| MUST be greater than 0 (true because Wz > 0 => |Z|>0)
+
+                // newcenter MUST be initialized to avoid possible "use before initialization" error later,
+                //  either create an empty Vector or newcenter = P.get(first)
+                final int first = Z_indexes.get(0);
+
                 Vector newcenter = P.get(first);        // dummy inizialization to avoid error
                 double max = getBallWeight(first, r, alpha, Z_indexes, W);   // max ball weight
                 int i_max = first;
-                for (int i = 1; i < P.size(); ++i) {    // find max ball, assign center and value of it to newcenter and max
-                                                        // finds the best center for uncovered points
+
+                for (int i = 1; i < P.size(); ++i) {    // finds the best center for uncovered points
+
                     double ball_weight = getBallWeight(i, r,  alpha, Z_indexes, W);
                     if (ball_weight > max) {
                         max = ball_weight;
@@ -75,14 +78,14 @@ public class G050HW2 {
                 }
                 S.add(newcenter);
 
+//  Alternative:
 //                ListIterator<Integer> Z_iter = Z_indexes.listIterator();
 //                while (Z_iter.hasNext()) {
-//                    final int Z_index = Z_iter.next().intValue();
+//                    final int Z_index = Z_iter.next();
 //                    if (distanceMatrix[i_max][Z_index] <= (3 + 4 * alpha) * r) {
 //                        Wz -= W.get(Z_index);
 //                        Z_iter.remove();
 //                    }
-//
 //                }
                 for (int i = 0; i < Z_indexes.size();) { // remove now covered points from Uncovered set, update Wz
                     if (distanceMatrix[i_max][Z_indexes.get(i)] <= (3 + 4 * alpha) * r) {
@@ -115,14 +118,14 @@ public class G050HW2 {
      * @param W         weights
      * @return ball weight
      */
-    private static double getBallWeight(int i, double r, double alpha, ArrayList<Integer> Z_indexes, ArrayList<Long> W) {
-        double ball_weight = 0.0;
+    private static double getBallWeight(int i, double r, double alpha, List<Integer> Z_indexes, ArrayList<Long> W) {
+        double ballWeight = 0.0;
         for (int j : Z_indexes) {
             if (distanceMatrix[i][j] <= (1 + 2*alpha) * r) {
-                ball_weight += W.get(j);
+                ballWeight += W.get(j);
             }
         }
-        return ball_weight;
+        return ballWeight;
     }
 
     /**
@@ -134,15 +137,14 @@ public class G050HW2 {
      * @return value of the objective function
      */
     public static double ComputeObjective(ArrayList<Vector> P, ArrayList<Vector> S, int z) {
-        // no problem if points are overlapping
+        // no problem if points in P (or S) are overlapping
         ArrayList<Double> distsToCenters = new ArrayList<>(Collections.nCopies(P.size(), Double.MAX_VALUE));
 
         for(Vector s : S) { // for every center
-            final int indS = P.indexOf(s); // compute indexes (in P) of elements in S
+            final int indS = P.indexOf(s); // find indexes (in P) of elements in S (or index of an overlapping point)
 
-            // to keep update distsToCenters with distances to subset of visited centers
-            for (int p = 0; p < P.size(); ++p) { // for every point, calculate distance to center
-                                                 // since S is a subset of P, we can use precalculated distanceMatrix
+            for (int p = 0; p < P.size(); ++p) { // for every point, calculate distance to center s
+                // since S is a subset of P, we can use precalculated distanceMatrix
                 if (distanceMatrix[indS][p] < distsToCenters.get(p)) {
                     distsToCenters.set(p, distanceMatrix[indS][p]);
                 }
@@ -150,9 +152,6 @@ public class G050HW2 {
         }
 
         distsToCenters.sort(Comparator.naturalOrder());
-
-        if(distsToCenters.get(S.size() - 1) != 0)   // to demonstrate that first s elements are 0
-            throw new AssertionError("Every center must be distant 0 from centers");
 
         return distsToCenters.get(P.size() - 1 - z);
     }
@@ -183,7 +182,6 @@ public class G050HW2 {
                 distanceMatrix[i][j] = distanceMatrix[j][i] = Math.sqrt(Vectors.sqdist(inputPoints.get(i), inputPoints.get(j)));
             }
         }
-
         ArrayList<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
         final long timeElapsed = System.currentTimeMillis() - startTime;
 
@@ -219,3 +217,4 @@ public class G050HW2 {
         return result;
     }
 }
+
